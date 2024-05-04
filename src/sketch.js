@@ -90,7 +90,6 @@ sketch.draw = () => {
           50,
           50
         )
-        // image(selectedFragment, mouseX, mouseY)
         captureDrawing()
         // https://stackoverflow.com/questions/69171227/p5-image-from-get-is-drawn-blurry-due-to-pixeldensity-issue-p5js
         break
@@ -152,6 +151,9 @@ sketch.mouseReleased = () => {
       img: sourceImage
     }
 
+    // NOTE: Anthony liked this method of painting
+    // so, leave it as an option
+    // maybe with a grid, or a minimum offset (via distance)
     // const sfw = selectionRect.x2 - selectionRect.x
     // const sfh = selectionRect.y2 - selectionRect.y
 
