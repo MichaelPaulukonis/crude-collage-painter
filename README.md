@@ -1,4 +1,8 @@
-# P5.js-vite Starter Template 🚀
+# collage painter
+
+- inspired by https://timrodenbroeker.de/lowtech-painting-machine/
+
+## P5.js-vite Starter Template 🚀
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
