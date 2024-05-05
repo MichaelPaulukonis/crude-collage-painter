@@ -19,8 +19,9 @@ let target = {
   x: 0,
   y: 0
 }
-let scale = { width: 0, height: 0 }
-let offset = { x: 0, y: 0 }
+let scale = { width: 0, height: 0 } // for selection windowing
+let offset = { x: 0, y: 0 } // for selection windowing
+let zoom = 1
 let painted
 let cnvs
 let selectedFragment
@@ -83,8 +84,8 @@ sketch.draw = () => {
           sourceFrom.img,
           sourceFrom.x + mouseX - target.x,
           sourceFrom.y + mouseY - target.y,
-          50,
-          50,
+          Math.round(50 * zoom),
+          Math.round(50 * zoom),
           mouseX,
           mouseY,
           50,
@@ -98,17 +99,23 @@ sketch.draw = () => {
     render()
     // image(selectedFragment, mouseX, mouseY)
   } else if (activity === activityModes.Selecting) {
+    // we are capturing the "zoomed" location
+    // but we need to capture the "original" for painting, and zoom at that point
     offset.x = constrain(
-      map(mouseX, 0, cnvs.width, 0, sourceImage.width - cnvs.width),
+      map(mouseX, 0, cnvs.width, 0, sourceImage.width * zoom - cnvs.width),
       0,
-      sourceImage.width - cnvs.width
+      sourceImage.width * zoom - cnvs.width
     )
     offset.y = constrain(
-      map(mouseY, 0, cnvs.height, 0, sourceImage.height - cnvs.height),
+      map(mouseY, 0, cnvs.height, 0, sourceImage.height * zoom - cnvs.height),
       0,
-      sourceImage.height - cnvs.height
+      sourceImage.height * zoom - cnvs.height
     )
-    image(sourceImage, 0 - offset.x, 0 - offset.y)
+    image(sourceImage, 0 - offset.x, 0 - offset.y, sourceImage.width * zoom, sourceImage.height * zoom )
+
+    // image(img, dstX - dstWidth / 2, dstY - dstHeight / 2, dstWidth, dstHeight, srcX, srcY, srcWidth, srcHeight);
+
+
   }
 }
 
@@ -146,8 +153,8 @@ sketch.mouseReleased = () => {
     renderSource()
 
     sourceFrom = {
-      x: mouseX + offset.x,
-      y: mouseY + offset.y,
+      x: Math.round(mouseX + offset.x / zoom),
+      y: Math.round(mouseY + offset.y / zoom),
       img: sourceImage
     }
 
@@ -195,3 +202,29 @@ sketch.keyTyped = () => {
 
   return false
 }
+
+sketch.keyPressed = () => {
+  // possible only during selection activity
+  // maybe we need multiple scenes for this? !!! ?
+  if (keyCode === UP_ARROW) {
+    zoom += 0.1
+  } else if (keyCode === DOWN_ARROW) {
+    zoom = zoom - 0.1 < 0 ? 0 : zoom - 0.1
+  }
+
+  if (key === 's') {
+    renderSource()
+    activity = activityModes.Selecting
+    stroke('black')
+    strokeWeight(2)
+  } else if (key === 'd') {
+    activity = activityModes.Drawing
+  } else if (key === 'i') {
+    sourceIndex = ++sourceIndex % elementImages.length
+    sourceImage = elementImages[sourceIndex]
+    renderSource()
+  }
+
+  return false; // Prevent default behavior
+}
+
