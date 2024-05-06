@@ -21,7 +21,7 @@ let target = {
 }
 let scale = { width: 0, height: 0 } // for selection windowing
 let offset = { x: 0, y: 0 } // for selection windowing
-let zoom = 1
+let zoom = 1.5
 let painted
 let cnvs
 let selectedFragment
@@ -80,12 +80,14 @@ sketch.draw = () => {
   if (mouseIsPressed) {
     switch (activity) {
       case activityModes.Drawing:
+        // source to destination
+        // copy a _SMALLER_ area, but stil target "normal" 50px
         copy(
           sourceFrom.img,
-          sourceFrom.x + mouseX - target.x,
-          sourceFrom.y + mouseY - target.y,
-          Math.round(50 * zoom),
-          Math.round(50 * zoom),
+          (sourceFrom.x + mouseX - target.x) / zoom,
+          (sourceFrom.y + mouseY - target.y) / zoom,
+          Math.round(50 / zoom),
+          Math.round(50 / zoom),
           mouseX,
           mouseY,
           50,
@@ -101,21 +103,36 @@ sketch.draw = () => {
   } else if (activity === activityModes.Selecting) {
     // we are capturing the "zoomed" location
     // but we need to capture the "original" for painting, and zoom at that point
-    offset.x = constrain(
+    let zoomx = constrain(
       map(mouseX, 0, cnvs.width, 0, sourceImage.width * zoom - cnvs.width),
       0,
       sourceImage.width * zoom - cnvs.width
     )
-    offset.y = constrain(
+    let zoomy = constrain(
       map(mouseY, 0, cnvs.height, 0, sourceImage.height * zoom - cnvs.height),
       0,
       sourceImage.height * zoom - cnvs.height
     )
-    image(sourceImage, 0 - offset.x, 0 - offset.y, sourceImage.width * zoom, sourceImage.height * zoom )
-
-    // image(img, dstX - dstWidth / 2, dstY - dstHeight / 2, dstWidth, dstHeight, srcX, srcY, srcWidth, srcHeight);
-
-
+    offset.x = constrain(
+      map(mouseX, 0, cnvs.width, 0, sourceImage.width - cnvs.width),
+      0,
+      sourceImage.width * zoom - cnvs.width
+    )
+    offset.y = constrain(
+      map(mouseY, 0, cnvs.height, 0, sourceImage.height - cnvs.height),
+      0,
+      sourceImage.height * zoom - cnvs.height
+    )
+    // this works great for large images
+    // not for reduced size
+    // but we don't capture the original loc, so it's a mess
+    image(
+      sourceImage,
+      0 - zoomx,
+      0 - zoomy,
+      sourceImage.width * zoom,
+      sourceImage.height * zoom
+    )
   }
 }
 
@@ -143,8 +160,11 @@ const renderSource = () => {
 
 sketch.mousePressed = () => {
   if (activity === activityModes.Drawing) {
-    target.x = mouseX
-    target.y = mouseY
+    // capture initial location
+    target = {
+      x: mouseX,
+      y: mouseY
+    }
   }
 }
 
@@ -152,11 +172,16 @@ sketch.mouseReleased = () => {
   if (activity === activityModes.Selecting) {
     renderSource()
 
+    // TODO: when scale changes, this also needs to change
+    // so we have to store the "original" values
+    // and recalc the zoom
     sourceFrom = {
-      x: Math.round(mouseX + offset.x / zoom),
-      y: Math.round(mouseY + offset.y / zoom),
+      x: Math.round((mouseX + offset.x) * zoom),
+      y: Math.round((mouseY + offset.y) * zoom),
       img: sourceImage
     }
+
+    console.log(mouseX, offset.x, mouseY, offset.y, zoom, sourceFrom)
 
     // NOTE: Anthony liked this method of painting
     // so, leave it as an option
@@ -225,6 +250,5 @@ sketch.keyPressed = () => {
     renderSource()
   }
 
-  return false; // Prevent default behavior
+  return false // Prevent default behavior
 }
-
