@@ -84,8 +84,8 @@ sketch.draw = () => {
         // copy a _SMALLER_ area, but stil target "normal" 50px
         copy(
           sourceFrom.img,
-          (sourceFrom.x + mouseX - target.x) / zoom,
-          (sourceFrom.y + mouseY - target.y) / zoom,
+          (sourceFrom.x * zoom + mouseX - target.x) / zoom,
+          (sourceFrom.y * zoom + mouseY - target.y) / zoom,
           Math.round(50 / zoom),
           Math.round(50 / zoom),
           mouseX,
@@ -102,7 +102,6 @@ sketch.draw = () => {
     // image(selectedFragment, mouseX, mouseY)
   } else if (activity === activityModes.Selecting) {
     // we are capturing the "zoomed" location
-    // but we need to capture the "original" for painting, and zoom at that point
     let zoomx = constrain(
       map(mouseX, 0, cnvs.width, 0, sourceImage.width * zoom - cnvs.width),
       0,
@@ -123,9 +122,6 @@ sketch.draw = () => {
       0,
       sourceImage.height * zoom - cnvs.height
     )
-    // this works great for large images
-    // not for reduced size
-    // but we don't capture the original loc, so it's a mess
     image(
       sourceImage,
       0 - zoomx,
@@ -176,8 +172,8 @@ sketch.mouseReleased = () => {
     // so we have to store the "original" values
     // and recalc the zoom
     sourceFrom = {
-      x: Math.round((mouseX + offset.x) * zoom),
-      y: Math.round((mouseY + offset.y) * zoom),
+      x: Math.round((mouseX + offset.x)),
+      y: Math.round((mouseY + offset.y)),
       img: sourceImage
     }
 
@@ -234,7 +230,7 @@ sketch.keyPressed = () => {
   if (keyCode === UP_ARROW) {
     zoom += 0.1
   } else if (keyCode === DOWN_ARROW) {
-    zoom = zoom - 0.1 < 0 ? 0 : zoom - 0.1
+    zoom = zoom - 0.1 <= 0.1 ? 0.1 : zoom - 0.1
   }
 
   if (key === 's') {
