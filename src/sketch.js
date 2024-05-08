@@ -113,35 +113,23 @@ sketch.draw = () => {
     // for rubber-stamping
     // image(selectedFragment, mouseX, mouseY)
   } else if (activity === activityModes.Selecting) {
-    // we are capturing the "zoomed" location
-    // which works, until the zoom is SMALLER than 1
-    let zoomx = constrain(
-      map(mouseX, 0, cnvs.width, 0, sourceImage.width * zoom - cnvs.width),
-      0,
-      sourceImage.width * zoom - cnvs.width
-    )
-    let zoomy = constrain(
-      map(mouseY, 0, cnvs.height, 0, sourceImage.height * zoom - cnvs.height),
-      0,
-      sourceImage.height * zoom - cnvs.height
-    )
     offset.x = constrain(
       map(mouseX, 0, cnvs.width, 0, sourceImage.width - cnvs.width),
       0,
-      sourceImage.width * zoom - cnvs.width
+      sourceImage.width - cnvs.width
     )
     offset.y = constrain(
       map(mouseY, 0, cnvs.height, 0, sourceImage.height - cnvs.height),
       0,
-      sourceImage.height * zoom - cnvs.height
+      sourceImage.height - cnvs.height
     )
     background('white')
     image(
       sourceImage,
-      0 - zoomx,
-      0 - zoomy,
-      sourceImage.width * zoom,
-      sourceImage.height * zoom
+      0 - offset.x,
+      0 - offset.y,
+      sourceImage.width,
+      sourceImage.height
     )
   }
 }
