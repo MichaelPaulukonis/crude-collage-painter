@@ -1,5 +1,11 @@
 import '../css/style.css'
-import { sketch } from 'p5js-wrapper'
+import { sketch, p5 } from 'p5js-wrapper'
+import saveAs from 'file-saver'
+import { datestring, filenamer } from './filelib'
+import './utils.js'
+
+let namer = filenamer(datestring())
+var utils
 
 let elementImages = []
 let selectionRect = {
@@ -30,7 +36,8 @@ let sourceIndex = 0
 let density
 const activityModes = {
   Selecting: 'select',
-  Drawing: 'draw'
+  Drawing: 'draw',
+  Gallery: 'gallery'
 }
 let activity = activityModes.Selecting
 
@@ -42,6 +49,7 @@ sketch.preload = () => {
 }
 
 sketch.setup = () => {
+  utils = new p5.Utils();
   cnvs = createCanvas(600, 600)
   cnvs.drop(handleFile)
   density = pixelDensity()
@@ -60,6 +68,8 @@ function handleFile (file) {
     loadImage(file.data, img => {
       elementImages.push(img)
       scale = getScale(img, cnvs)
+      activity = activityModes.Gallery
+      displayGallery()
     })
   } else {
     console.log('Not an image file!')
@@ -77,6 +87,7 @@ const getScale = (img, boundary) => {
 
 // when I click, that becomes the "zero-point" that matches selection-point
 sketch.draw = () => {
+  utils.debug({ 'zoom': zoom })
   if (mouseIsPressed) {
     switch (activity) {
       case activityModes.Drawing:
@@ -99,9 +110,11 @@ sketch.draw = () => {
     }
   } else if (activity === activityModes.Drawing) {
     render()
+    // for rubber-stamping
     // image(selectedFragment, mouseX, mouseY)
   } else if (activity === activityModes.Selecting) {
     // we are capturing the "zoomed" location
+    // which works, until the zoom is SMALLER than 1
     let zoomx = constrain(
       map(mouseX, 0, cnvs.width, 0, sourceImage.width * zoom - cnvs.width),
       0,
@@ -122,6 +135,7 @@ sketch.draw = () => {
       0,
       sourceImage.height * zoom - cnvs.height
     )
+    background('white')
     image(
       sourceImage,
       0 - zoomx,
@@ -130,6 +144,16 @@ sketch.draw = () => {
       sourceImage.height * zoom
     )
   }
+}
+
+const saver = (canvas, name) => {
+  canvas.toBlob(blob => saveAs(blob, name))
+}
+
+function download () {
+  const name = namer() + '.png'
+  saver(cnvs.drawingContext.canvas, name)
+  console.log('downloaded ' + name)
 }
 
 const captureDrawing = () => {
@@ -147,7 +171,9 @@ const captureDrawing = () => {
 }
 
 const render = () => {
-  image(painted, 0, 0, width, height)
+  if (activity === activityModes.Drawing) {
+    image(painted, 0, 0, width, height)
+  }
 }
 
 const renderSource = () => {
@@ -172,8 +198,8 @@ sketch.mouseReleased = () => {
     // so we have to store the "original" values
     // and recalc the zoom
     sourceFrom = {
-      x: Math.round((mouseX + offset.x)),
-      y: Math.round((mouseY + offset.y)),
+      x: Math.round(mouseX + offset.x),
+      y: Math.round(mouseY + offset.y),
       img: sourceImage
     }
 
@@ -224,26 +250,57 @@ sketch.keyTyped = () => {
   return false
 }
 
+// Show input image gallery (no more than 9 for speed)
+const displayGallery = () => {
+  const tileCountX = 3
+  const tileCountY = 3
+
+  const tileWidth = cnvs.width / tileCountX
+  const tileHeight = cnvs.height / tileCountY
+  background('white')
+  fill('black')
+
+  let i = 0
+  for (let gridY = 0; gridY < tileCountY; gridY++) {
+    for (let gridX = 0; gridX < tileCountX; gridX++) {
+      if (i >= elementImages.length) {
+        text('Drop to upload', gridX * tileWidth + 20, gridY * tileHeight + tileWidth / 2)
+      } else {
+      const tmp = elementImages[i].get()
+      tmp.resize(0, tileHeight)
+      image(tmp, gridX * tileWidth, gridY * tileHeight)
+      }
+      i++
+    }
+  }
+}
+
 sketch.keyPressed = () => {
   // possible only during selection activity
   // maybe we need multiple scenes for this? !!! ?
   if (keyCode === UP_ARROW) {
     zoom += 0.1
   } else if (keyCode === DOWN_ARROW) {
-    zoom = zoom - 0.1 <= 0.1 ? 0.1 : zoom - 0.1
+    zoom = 
+    +(zoom - 0.1 <= 0.1 ? 0.1 : zoom - 0.1).toFixed(2)
   }
 
-  if (key === 's') {
+  if (key === 'p') {
     renderSource()
     activity = activityModes.Selecting
     stroke('black')
     strokeWeight(2)
+  } else if (key === 's') {
+    download()
   } else if (key === 'd') {
     activity = activityModes.Drawing
   } else if (key === 'i') {
     sourceIndex = ++sourceIndex % elementImages.length
     sourceImage = elementImages[sourceIndex]
     renderSource()
+  } else if (key === 'g') {
+    activity = activityModes.Gallery
+    displayGallery()
   }
 
   return false // Prevent default behavior
