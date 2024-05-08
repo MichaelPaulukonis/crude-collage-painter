@@ -40,6 +40,7 @@ const activityModes = {
   Gallery: 'gallery'
 }
 let activity = activityModes.Selecting
+let isDrawing = false
 
 sketch.preload = () => {
   for (let i = 0; i < 3; i++) {
@@ -49,7 +50,7 @@ sketch.preload = () => {
 }
 
 sketch.setup = () => {
-  utils = new p5.Utils();
+  utils = new p5.Utils()
   cnvs = createCanvas(600, 600)
   cnvs.drop(handleFile)
   density = pixelDensity()
@@ -87,50 +88,50 @@ const getScale = (img, boundary) => {
 
 // when I click, that becomes the "zero-point" that matches selection-point
 sketch.draw = () => {
-  utils.debug({ 'zoom': zoom })
-  if (mouseIsPressed) {
-    switch (activity) {
-      case activityModes.Drawing:
-        // source to destination
-        // copy a _SMALLER_ area, but stil target "normal" 50px
-        copy(
-          sourceFrom.img,
-          (sourceFrom.x * zoom + mouseX - target.x) / zoom,
-          (sourceFrom.y * zoom + mouseY - target.y) / zoom,
-          Math.round(50 / zoom),
-          Math.round(50 / zoom),
-          mouseX,
-          mouseY,
-          50,
-          50
-        )
-        captureDrawing()
-        // https://stackoverflow.com/questions/69171227/p5-image-from-get-is-drawn-blurry-due-to-pixeldensity-issue-p5js
-        break
-    }
-  } else if (activity === activityModes.Drawing) {
-    render()
-    // for rubber-stamping
-    // image(selectedFragment, mouseX, mouseY)
-  } else if (activity === activityModes.Selecting) {
-    offset.x = constrain(
-      map(mouseX, 0, cnvs.width, 0, sourceImage.width - cnvs.width),
-      0,
-      sourceImage.width - cnvs.width
-    )
-    offset.y = constrain(
-      map(mouseY, 0, cnvs.height, 0, sourceImage.height - cnvs.height),
-      0,
-      sourceImage.height - cnvs.height
-    )
-    background('white')
-    image(
-      sourceImage,
-      0 - offset.x,
-      0 - offset.y,
-      sourceImage.width,
-      sourceImage.height
-    )
+  // utils.debug({ 'target': `${target.x} ${target.y}` })
+  switch (activity) {
+    case activityModes.Drawing:
+      render()
+      // source to destination
+      // copy a _SMALLER_ area, but stil target "normal" 50px
+      let dOffset = isDrawing 
+        ? {x: mouseX - target.x, y: mouseY - target.y}
+        : {x: 0, y: 0}
+      copy(
+        sourceFrom.img,
+        (sourceFrom.x * zoom + dOffset.x) / zoom,
+        (sourceFrom.y * zoom + dOffset.y) / zoom,
+        Math.round(50 / zoom),
+        Math.round(50 / zoom),
+        mouseX,
+        mouseY,
+        50,
+        50
+      )
+      if (mouseIsPressed) captureDrawing()
+      // https://stackoverflow.com/questions/69171227/p5-image-from-get-is-drawn-blurry-due-to-pixeldensity-issue-p5js
+      break
+
+    case activityModes.Selecting:
+      offset.x = constrain(
+        map(mouseX, 0, cnvs.width, 0, sourceImage.width - cnvs.width),
+        0,
+        sourceImage.width - cnvs.width
+      )
+      offset.y = constrain(
+        map(mouseY, 0, cnvs.height, 0, sourceImage.height - cnvs.height),
+        0,
+        sourceImage.height - cnvs.height
+      )
+      background('white')
+      image(
+        sourceImage,
+        0 - offset.x,
+        0 - offset.y,
+        sourceImage.width,
+        sourceImage.height
+      )
+      break
   }
 }
 
@@ -159,17 +160,17 @@ const captureDrawing = () => {
 }
 
 const render = () => {
-  if (activity === activityModes.Drawing) {
-    image(painted, 0, 0, width, height)
-  }
+  image(painted, 0, 0, width, height)
 }
 
 const renderSource = () => {
   image(sourceImage, 0, 0)
 }
 
+// this is START of press
 sketch.mousePressed = () => {
   if (activity === activityModes.Drawing) {
+    isDrawing = true
     // capture initial location
     target = {
       x: mouseX,
@@ -179,12 +180,13 @@ sketch.mousePressed = () => {
 }
 
 sketch.mouseReleased = () => {
+  if (activity === activityModes.Drawing) {
+    isDrawing = false
+  }
+
   if (activity === activityModes.Selecting) {
     renderSource()
 
-    // TODO: when scale changes, this also needs to change
-    // so we have to store the "original" values
-    // and recalc the zoom
     sourceFrom = {
       x: Math.round(mouseX + offset.x),
       y: Math.round(mouseY + offset.y),
@@ -252,11 +254,15 @@ const displayGallery = () => {
   for (let gridY = 0; gridY < tileCountY; gridY++) {
     for (let gridX = 0; gridX < tileCountX; gridX++) {
       if (i >= elementImages.length) {
-        text('Drop to upload', gridX * tileWidth + 20, gridY * tileHeight + tileWidth / 2)
+        text(
+          'Drop to upload',
+          gridX * tileWidth + 20,
+          gridY * tileHeight + tileWidth / 2
+        )
       } else {
-      const tmp = elementImages[i].get()
-      tmp.resize(0, tileHeight)
-      image(tmp, gridX * tileWidth, gridY * tileHeight)
+        const tmp = elementImages[i].get()
+        tmp.resize(0, tileHeight)
+        image(tmp, gridX * tileWidth, gridY * tileHeight)
       }
       i++
     }
@@ -269,8 +275,7 @@ sketch.keyPressed = () => {
   if (keyCode === UP_ARROW) {
     zoom += 0.1
   } else if (keyCode === DOWN_ARROW) {
-    zoom = 
-    +(zoom - 0.1 <= 0.1 ? 0.1 : zoom - 0.1).toFixed(2)
+    zoom = +(zoom - 0.1 <= 0.1 ? 0.1 : zoom - 0.1).toFixed(2)
   }
 
   if (key === 'p') {
