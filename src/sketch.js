@@ -94,9 +94,9 @@ sketch.draw = () => {
       render()
       // source to destination
       // copy a _SMALLER_ area, but stil target "normal" 50px
-      let dOffset = isDrawing 
-        ? {x: mouseX - target.x, y: mouseY - target.y}
-        : {x: 0, y: 0}
+      let dOffset = isDrawing
+        ? { x: mouseX - target.x, y: mouseY - target.y }
+        : { x: 0, y: 0 }
       copy(
         sourceFrom.img,
         (sourceFrom.x * zoom + dOffset.x) / zoom,
@@ -176,6 +176,14 @@ sketch.mousePressed = () => {
       x: mouseX,
       y: mouseY
     }
+  } else if (activity === activityModes.Gallery) {
+    const tileSize = cnvs.width / 3
+    let clickedIndex = floor(mouseX / tileSize) + floor(mouseY / tileSize) * 3
+    if (clickedIndex < elementImages.length) {
+      sourceIndex = clickedIndex
+      sourceImage = elementImages[sourceIndex]
+    }
+    displayGallery()
   }
 }
 
@@ -249,6 +257,7 @@ const displayGallery = () => {
   const tileHeight = cnvs.height / tileCountY
   background('white')
   fill('black')
+  noStroke()
 
   let i = 0
   for (let gridY = 0; gridY < tileCountY; gridY++) {
@@ -263,10 +272,31 @@ const displayGallery = () => {
         const tmp = elementImages[i].get()
         tmp.resize(0, tileHeight)
         image(tmp, gridX * tileWidth, gridY * tileHeight)
+
+        if (sourceIndex === i) {
+          noFill()
+          stroke('green')
+          strokeWeight(4)
+          rect(
+            gridX * tileWidth,
+            gridY * tileHeight,
+            gridX * tileWidth + tileWidth,
+            gridY * tileHeight + tileHeight
+          )
+          fill('black')
+          noStroke()
+        }
       }
       i++
     }
   }
+}
+
+const deleteImage = index => {
+  elementImages.splice(index, 1)
+  sourceIndex =
+    sourceIndex < elementImages.length ? sourceIndex : sourceIndex - 1
+  sourceImage = elementImages[sourceIndex]
 }
 
 sketch.keyPressed = () => {
@@ -290,10 +320,18 @@ sketch.keyPressed = () => {
   } else if (key === 'i') {
     sourceIndex = ++sourceIndex % elementImages.length
     sourceImage = elementImages[sourceIndex]
-    renderSource()
+    renderSource() // why???
+    if (activity === activityModes.Gallery) displayGallery()
   } else if (key === 'g') {
     activity = activityModes.Gallery
     displayGallery()
+  }
+
+  if (activity === activityModes.Gallery) {
+    if (key === 'x') {
+      deleteImage(sourceIndex)
+      displayGallery()
+    }
   }
 
   return false // Prevent default behavior
