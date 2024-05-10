@@ -25,6 +25,11 @@ let target = {
   x: 0,
   y: 0
 }
+let cursor = {
+  width: 50,
+  height: 50,
+  shape: 'square' // for the future
+}
 let scale = { width: 0, height: 0 } // for selection windowing
 let offset = { x: 0, y: 0 } // for selection windowing
 let zoom = 1.5
@@ -59,7 +64,7 @@ sketch.setup = () => {
   sourceImage = elementImages[sourceIndex]
   image(sourceImage, 0, 0)
   captureDrawing()
-  rectMode(CORNERS)
+  rectMode(CENTER)
   noFill()
 }
 
@@ -88,7 +93,6 @@ const getScale = (img, boundary) => {
 
 // when I click, that becomes the "zero-point" that matches selection-point
 sketch.draw = () => {
-  // utils.debug({ 'target': `${target.x} ${target.y}` })
   switch (activity) {
     case activityModes.Drawing:
       render()
@@ -99,14 +103,14 @@ sketch.draw = () => {
         : { x: 0, y: 0 }
       copy(
         sourceFrom.img,
-        (sourceFrom.x * zoom + dOffset.x) / zoom,
-        (sourceFrom.y * zoom + dOffset.y) / zoom,
-        Math.round(50 / zoom),
-        Math.round(50 / zoom),
-        mouseX,
-        mouseY,
-        50,
-        50
+        (sourceFrom.x * zoom + dOffset.x - cursor.width / 2) / zoom,
+        (sourceFrom.y * zoom + dOffset.y - cursor.height / 2) / zoom,
+        Math.round(cursor.width / zoom),
+        Math.round(cursor.height / zoom),
+        mouseX - cursor.width / 2,
+        mouseY - cursor.height / 2,
+        cursor.width,
+        cursor.height
       )
       if (mouseIsPressed) captureDrawing()
       // https://stackoverflow.com/questions/69171227/p5-image-from-get-is-drawn-blurry-due-to-pixeldensity-issue-p5js
@@ -131,6 +135,7 @@ sketch.draw = () => {
         sourceImage.width,
         sourceImage.height
       )
+      rect(mouseX, mouseY, cursor.width, cursor.height)
       break
   }
 }
@@ -201,8 +206,6 @@ sketch.mouseReleased = () => {
       img: sourceImage
     }
 
-    console.log(mouseX, offset.x, mouseY, offset.y, zoom, sourceFrom)
-
     // NOTE: Anthony liked this method of painting
     // so, leave it as an option
     // maybe with a grid, or a minimum offset (via distance)
@@ -229,23 +232,6 @@ sketch.mouseReleased = () => {
     //   y2: 0
     // }
   }
-}
-
-sketch.keyTyped = () => {
-  if (key === 's') {
-    renderSource()
-    activity = activityModes.Selecting
-    stroke('black')
-    strokeWeight(2)
-  } else if (key === 'd') {
-    activity = activityModes.Drawing
-  } else if (key === 'i') {
-    sourceIndex = ++sourceIndex % elementImages.length
-    sourceImage = elementImages[sourceIndex]
-    renderSource()
-  }
-
-  return false
 }
 
 // Show input image gallery (no more than 9 for speed)
@@ -278,10 +264,10 @@ const displayGallery = () => {
           stroke('green')
           strokeWeight(4)
           rect(
-            gridX * tileWidth,
-            gridY * tileHeight,
-            gridX * tileWidth + tileWidth,
-            gridY * tileHeight + tileHeight
+            gridX * tileWidth + tileWidth / 2,
+            gridY * tileHeight+ tileWidth / 2,
+            tileWidth,
+            tileWidth
           )
           fill('black')
           noStroke()
@@ -321,7 +307,15 @@ sketch.keyPressed = () => {
     sourceIndex = ++sourceIndex % elementImages.length
     sourceImage = elementImages[sourceIndex]
     renderSource() // why???
-    if (activity === activityModes.Gallery) displayGallery()
+    if (activity === activityModes.Gallery) { 
+      displayGallery()
+    } else if (activity === activityModes.Drawing) {
+      sourceFrom = {
+        x: sourceImage.width / 2,
+        y: sourceImage.height / 2, // or... keep what is set, as long as w/in new boundaries
+        img: sourceImage
+      }
+    }
   } else if (key === 'g') {
     activity = activityModes.Gallery
     displayGallery()
