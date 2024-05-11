@@ -95,6 +95,7 @@ const getScale = (img, boundary) => {
 sketch.draw = () => {
   switch (activity) {
     case activityModes.Drawing:
+      handleKeyInput()
       render()
       // source to destination
       // copy a _SMALLER_ area, but stil target "normal" 50px
@@ -117,6 +118,7 @@ sketch.draw = () => {
       break
 
     case activityModes.Selecting:
+      noFill()
       offset.x = constrain(
         map(mouseX, 0, cnvs.width, 0, sourceImage.width - cnvs.width),
         0,
@@ -187,6 +189,11 @@ sketch.mousePressed = () => {
     if (clickedIndex < elementImages.length) {
       sourceIndex = clickedIndex
       sourceImage = elementImages[sourceIndex]
+      sourceFrom = {
+        x: sourceImage.width / 2,
+        y: sourceImage.height / 2, // or... keep what is set, as long as w/in new boundaries
+        img: sourceImage
+      }
     }
     displayGallery()
   }
@@ -285,15 +292,24 @@ const deleteImage = index => {
   sourceImage = elementImages[sourceIndex]
 }
 
-sketch.keyPressed = () => {
-  // possible only during selection activity
-  // maybe we need multiple scenes for this? !!! ?
-  if (keyCode === UP_ARROW) {
-    zoom += 0.1
-  } else if (keyCode === DOWN_ARROW) {
-    zoom = +(zoom - 0.1 <= 0.1 ? 0.1 : zoom - 0.1).toFixed(2)
-  }
+const handleKeyInput = () => {
+  let multiplier = 1
+  if (keyIsDown(SHIFT)) multiplier = 10
 
+  if (keyIsDown(RIGHT_ARROW)) {
+    cursor.width += 1 * multiplier
+    cursor.height += 1 * multiplier
+  } else if (keyIsDown(LEFT_ARROW)) {
+    cursor.width -= 1 * multiplier
+    cursor.height -= 1 * multiplier
+  } else if (keyIsDown(UP_ARROW)) {
+    zoom += 0.01
+  } else if (keyIsDown(DOWN_ARROW)) {
+    zoom = +(zoom - 0.01 <= 0.01 ? 0.01 : zoom - 0.01).toFixed(2)
+  }
+}
+
+sketch.keyPressed = () => {
   if (key === 'p') {
     renderSource()
     activity = activityModes.Selecting
