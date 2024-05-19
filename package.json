@@ -4,9 +4,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "DEPLOY_ENV=GH_PAGES gh-pages -d dist",
+    "publish": "npm run deploy",
+    "open": "open https://michaelpaulukonis.github.io/crude-collage-painter/"
   },
   "devDependencies": {
+    "gh-pages": "^6.1.1",
     "vite": "^2.7.2"
   },
   "dependencies": {

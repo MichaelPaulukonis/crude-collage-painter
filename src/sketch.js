@@ -30,6 +30,20 @@ let cursor = {
   height: 50,
   shape: 'square' // for the future
 }
+const activityModes = {
+  Selecting: 'select',
+  Drawing: 'draw',
+  Gallery: 'gallery'
+}
+let activity = activityModes.Selecting
+let isDrawing = false
+const copyModes = {
+  Relative: 'relative',
+  Absolute: 'absolute',
+  RubberStamp: 'rubberstamp'
+}
+let copyMode = copyModes.Relative
+
 let scale = { width: 0, height: 0 } // for selection windowing
 let offset = { x: 0, y: 0 } // for selection windowing
 let zoom = 1.5
@@ -39,17 +53,10 @@ let selectedFragment
 let sourceImage
 let sourceIndex = 0
 let density
-const activityModes = {
-  Selecting: 'select',
-  Drawing: 'draw',
-  Gallery: 'gallery'
-}
-let activity = activityModes.Selecting
-let isDrawing = false
 
 sketch.preload = () => {
   for (let i = 0; i < 3; i++) {
-    let fname = `images/image.${i.toString().padStart(2, '0')}.jpg`
+    let fname = `./images/image.${i.toString().padStart(2, '0')}.jpg`
     elementImages[i] = loadImage(fname)
   }
 }
@@ -100,8 +107,10 @@ sketch.draw = () => {
       // source to destination
       // copy a _SMALLER_ area, but stil target "normal" 50px
       let dOffset = isDrawing
-        ? { x: mouseX - target.x, y: mouseY - target.y }
-        : { x: 0, y: 0 }
+        && copyMode !== copyModes.RubberStamp
+          ? { x: mouseX - target.x, y: mouseY - target.y }
+          : { x: 0, y: 0 }
+
       copy(
         sourceFrom.img,
         (sourceFrom.x * zoom + dOffset.x - cursor.width / 2) / zoom,
@@ -118,6 +127,11 @@ sketch.draw = () => {
       break
 
     case activityModes.Selecting:
+      // NOTE: no zoom while selecting makes things easier
+      // that is - it works
+      // but not all images fit on-screen usefully
+      // so, we need some sort of zooming
+      // OR a resize on import (not preferred solution)
       noFill()
       offset.x = constrain(
         map(mouseX, 0, cnvs.width, 0, sourceImage.width - cnvs.width),
@@ -179,9 +193,11 @@ sketch.mousePressed = () => {
   if (activity === activityModes.Drawing) {
     isDrawing = true
     // capture initial location
-    target = {
-      x: mouseX,
-      y: mouseY
+    if (copyMode === copyModes.Relative) {
+      target = {
+        x: mouseX,
+        y: mouseY
+      }
     }
   } else if (activity === activityModes.Gallery) {
     const tileSize = cnvs.width / 3
@@ -200,7 +216,7 @@ sketch.mousePressed = () => {
 }
 
 sketch.mouseReleased = () => {
-  if (activity === activityModes.Drawing) {
+  if (activity === activityModes.Drawing && copyMode !== copyModes.Absolute)  {
     isDrawing = false
   }
 
@@ -212,32 +228,6 @@ sketch.mouseReleased = () => {
       y: Math.round(mouseY + offset.y),
       img: sourceImage
     }
-
-    // NOTE: Anthony liked this method of painting
-    // so, leave it as an option
-    // maybe with a grid, or a minimum offset (via distance)
-    // const sfw = selectionRect.x2 - selectionRect.x
-    // const sfh = selectionRect.y2 - selectionRect.y
-
-    // selectedFragment = createImage(sfw, sfh)
-    // selectedFragment.copy(
-    //   sourceImage,
-    //   selectionRect.x,
-    //   selectionRect.y,
-    //   sfw,
-    //   sfh,
-    //   0,
-    //   0,
-    //   sfw,
-    //   sfh
-    // )
-
-    // selectionRect = {
-    //   x: 0,
-    //   y: 0,
-    //   x2: 0,
-    //   y2: 0
-    // }
   }
 }
 
@@ -272,7 +262,7 @@ const displayGallery = () => {
           strokeWeight(4)
           rect(
             gridX * tileWidth + tileWidth / 2,
-            gridY * tileHeight+ tileWidth / 2,
+            gridY * tileHeight + tileWidth / 2,
             tileWidth,
             tileWidth
           )
@@ -323,7 +313,7 @@ sketch.keyPressed = () => {
     sourceIndex = ++sourceIndex % elementImages.length
     sourceImage = elementImages[sourceIndex]
     renderSource() // why???
-    if (activity === activityModes.Gallery) { 
+    if (activity === activityModes.Gallery) {
       displayGallery()
     } else if (activity === activityModes.Drawing) {
       sourceFrom = {
@@ -335,6 +325,12 @@ sketch.keyPressed = () => {
   } else if (key === 'g') {
     activity = activityModes.Gallery
     displayGallery()
+  } else if (key === '1') {
+    copyMode = copyModes.Relative
+  } else if (key === '2') {
+    copyMode = copyModes.RubberStamp
+  } else if (key === '3') {
+    copyMode = copyModes.Absolute
   }
 
   if (activity === activityModes.Gallery) {
