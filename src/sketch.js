@@ -1,11 +1,13 @@
 import '../css/style.css'
 import { sketch, p5 } from 'p5js-wrapper'
+import { Pane } from 'tweakpane'
 import saveAs from 'file-saver'
 import { datestring, filenamer } from './filelib'
 import './utils.js'
 
 let namer = filenamer(datestring())
 var utils
+const pane = new Pane()
 
 let elementImages = []
 let selectionRect = {
@@ -44,6 +46,10 @@ const copyModes = {
 }
 let copyMode = copyModes.Relative
 
+let config = {
+  minDistance: 30
+}
+
 let scale = { width: 0, height: 0 } // for selection windowing
 let offset = { x: 0, y: 0 } // for selection windowing
 let zoom = 1.5
@@ -53,6 +59,7 @@ let selectedFragment
 let sourceImage
 let sourceIndex = 0
 let density
+let prevMouse
 
 sketch.preload = () => {
   for (let i = 0; i < 3; i++) {
@@ -66,13 +73,21 @@ sketch.setup = () => {
   cnvs = createCanvas(600, 600)
   cnvs.drop(handleFile)
   density = pixelDensity()
-  console.log(`density: ${density}`)
   painted = createImage(width * density, height * density)
   sourceImage = elementImages[sourceIndex]
   image(sourceImage, 0, 0)
   captureDrawing()
   rectMode(CENTER)
   noFill()
+  prevMouse = createVector(0, 0)
+
+  const tab = pane.addTab({
+    pages: [{ title: 'Parameters' }]
+  })
+  const parmTab = tab.pages[0]
+
+  parmTab.addBinding(config, 'minDistance', { min: 1, max: 200, step: 1 })
+
 }
 
 // Handle file uploads
@@ -104,10 +119,14 @@ sketch.draw = () => {
     case activityModes.Drawing:
       handleKeyInput()
       render()
+
+      let curMouse = createVector(mouseX, mouseY)
+      const dist = curMouse.dist(prevMouse)
+
       // source to destination
       // copy a _SMALLER_ area, but stil target "normal" 50px
-      let dOffset = isDrawing
-        && copyMode !== copyModes.RubberStamp
+      let dOffset =
+        isDrawing && copyMode !== copyModes.RubberStamp
           ? { x: mouseX - target.x, y: mouseY - target.y }
           : { x: 0, y: 0 }
 
@@ -122,7 +141,10 @@ sketch.draw = () => {
         cursor.width,
         cursor.height
       )
-      if (mouseIsPressed) captureDrawing()
+      if (mouseIsPressed && dist >= config.minDistance) {
+        prevMouse = curMouse.copy()
+        captureDrawing()
+      }
       // https://stackoverflow.com/questions/69171227/p5-image-from-get-is-drawn-blurry-due-to-pixeldensity-issue-p5js
       break
 
@@ -216,7 +238,7 @@ sketch.mousePressed = () => {
 }
 
 sketch.mouseReleased = () => {
-  if (activity === activityModes.Drawing && copyMode !== copyModes.Absolute)  {
+  if (activity === activityModes.Drawing && copyMode !== copyModes.Absolute) {
     isDrawing = false
   }
 
