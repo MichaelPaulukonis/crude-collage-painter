@@ -10,12 +10,7 @@ var utils
 const pane = new Pane()
 
 let elementImages = []
-let selectionRect = {
-  x: 0,
-  y: 0,
-  x2: 0,
-  y2: 0
-}
+
 // origin coords plus source image
 // so we could have multiples maybe
 let sourceFrom = {
@@ -44,10 +39,16 @@ const copyModes = {
   Absolute: 'absolute',
   RubberStamp: 'rubberstamp'
 }
-let copyMode = copyModes.Relative
 
 let config = {
-  minDistance: 30
+  copyMode: copyModes.Relative,
+  minDistance: 30,
+  rotateSource: false,
+  rotateSpeed: 50,
+  gapCounter: 0,
+  gapLength: 5,
+  gapActive: false,
+  gapChance: 0.05
 }
 
 let scale = { width: 0, height: 0 } // for selection windowing
@@ -55,7 +56,6 @@ let offset = { x: 0, y: 0 } // for selection windowing
 let zoom = 1.5
 let painted
 let cnvs
-let selectedFragment
 let sourceImage
 let sourceIndex = 0
 let density
@@ -75,7 +75,7 @@ sketch.setup = () => {
   density = pixelDensity()
   painted = createImage(width * density, height * density)
   sourceImage = elementImages[sourceIndex]
-  image(sourceImage, 0, 0)
+  background(255)
   captureDrawing()
   rectMode(CENTER)
   noFill()
@@ -86,8 +86,15 @@ sketch.setup = () => {
   })
   const parmTab = tab.pages[0]
 
-  parmTab.addBinding(config, 'minDistance', { min: 1, max: 200, step: 1 })
+  parmTab.addBinding(config, 'copyMode', { options: copyModes })
 
+  parmTab.addBinding(config, 'minDistance', { min: 1, max: 200, step: 1 })
+  parmTab.addBinding(config, 'rotateSource')
+  parmTab.addBinding(config, 'rotateSpeed', { min: 0, max: 50, step: 1 })
+  parmTab.addBinding(config, 'gapLength', { min: 5, max: 50, step: 1 })
+  parmTab.addBinding(config, 'gapChance', { min: 0, max: 1, step: 0.01 })
+
+  parmTab.addBinding(config, 'gapActive')
 }
 
 // Handle file uploads
@@ -120,40 +127,66 @@ sketch.draw = () => {
       handleKeyInput()
       render()
 
-      let curMouse = createVector(mouseX, mouseY)
-      const dist = curMouse.dist(prevMouse)
+      if (
+        config.rotateSource &&
+        config.rotateSpeed !== 0 &&
+        frameCount % (101 - config.rotateSpeed * 2) === 0
+      ) {
+        rotateImageIndex()
+        setSource()
+      }
 
       // source to destination
       // copy a _SMALLER_ area, but stil target "normal" 50px
       let dOffset =
-        isDrawing && copyMode !== copyModes.RubberStamp
+        isDrawing && config.copyMode === copyModes.RubberStamp
+          ? { x: 0, y: 0 }
+          : config.copyMode === copyModes.Relative
           ? { x: mouseX - target.x, y: mouseY - target.y }
-          : { x: 0, y: 0 }
+          : { x: mouseX, y: mouseY }
 
       copy(
         sourceFrom.img,
-        (sourceFrom.x * zoom + dOffset.x - cursor.width / 2) / zoom,
-        (sourceFrom.y * zoom + dOffset.y - cursor.height / 2) / zoom,
+        Math.round((sourceFrom.x * zoom + dOffset.x - cursor.width / 2) / zoom),
+        Math.round(
+          (sourceFrom.y * zoom + dOffset.y - cursor.height / 2) / zoom
+        ),
         Math.round(cursor.width / zoom),
         Math.round(cursor.height / zoom),
-        mouseX - cursor.width / 2,
-        mouseY - cursor.height / 2,
+        Math.round(mouseX - cursor.width / 2),
+        Math.round(mouseY - cursor.height / 2),
         cursor.width,
         cursor.height
       )
-      if (mouseIsPressed && dist >= config.minDistance) {
-        prevMouse = curMouse.copy()
-        captureDrawing()
+
+      if (mouseIsPressed) {
+        if (prevMouse.x === 0 && prevMouse.y === 0) {
+          prevMouse = createVector(mouseX, mouseY)
+        }
+        let curMouse = createVector(mouseX, mouseY)
+        const distance = Math.round(curMouse.dist(prevMouse))
+        if (!config.gapActive && random(1) < config.gapChance) {
+          config.gapActive = true
+          config.gapCounter = 0
+        }
+        if (config.gapActive) {
+          config.gapCounter++
+        }
+        if (
+          distance >= config.minDistance &&
+          (!config.gapActive || config.gapCounter >= config.gapLength)
+        ) {
+          prevMouse = curMouse.copy()
+          captureDrawing()
+          config.gapCounter = 0
+          config.gapActive = false
+        }
       }
+
       // https://stackoverflow.com/questions/69171227/p5-image-from-get-is-drawn-blurry-due-to-pixeldensity-issue-p5js
       break
 
     case activityModes.Selecting:
-      // NOTE: no zoom while selecting makes things easier
-      // that is - it works
-      // but not all images fit on-screen usefully
-      // so, we need some sort of zooming
-      // OR a resize on import (not preferred solution)
       noFill()
       offset.x = constrain(
         map(mouseX, 0, cnvs.width, 0, sourceImage.width - cnvs.width),
@@ -215,7 +248,7 @@ sketch.mousePressed = () => {
   if (activity === activityModes.Drawing) {
     isDrawing = true
     // capture initial location
-    if (copyMode === copyModes.Relative) {
+    if (config.copyMode === copyModes.Relative) {
       target = {
         x: mouseX,
         y: mouseY
@@ -238,7 +271,7 @@ sketch.mousePressed = () => {
 }
 
 sketch.mouseReleased = () => {
-  if (activity === activityModes.Drawing && copyMode !== copyModes.Absolute) {
+  if (activity === activityModes.Drawing) {
     isDrawing = false
   }
 
@@ -321,42 +354,58 @@ const handleKeyInput = () => {
   }
 }
 
+const rotateImageIndex = () => {
+  sourceIndex = ++sourceIndex % elementImages.length
+  sourceImage = elementImages[sourceIndex]
+}
+
+const setSource = () => {
+  sourceFrom = {
+    x: sourceImage.width / 2,
+    y: sourceImage.height / 2, // or... keep what is set, as long as w/in new boundaries
+    img: sourceImage
+  }
+}
+
+const clearCanvas = () => {
+  background('white')
+  captureDrawing()
+}
+
 sketch.keyPressed = () => {
+  // mode invariant
   if (key === 'p') {
     renderSource()
     activity = activityModes.Selecting
     stroke('black')
     strokeWeight(2)
-  } else if (key === 's') {
-    download()
-  } else if (key === 'd') {
-    activity = activityModes.Drawing
-  } else if (key === 'i') {
-    sourceIndex = ++sourceIndex % elementImages.length
-    sourceImage = elementImages[sourceIndex]
-    renderSource() // why???
-    if (activity === activityModes.Gallery) {
-      displayGallery()
-    } else if (activity === activityModes.Drawing) {
-      sourceFrom = {
-        x: sourceImage.width / 2,
-        y: sourceImage.height / 2, // or... keep what is set, as long as w/in new boundaries
-        img: sourceImage
-      }
-    }
   } else if (key === 'g') {
     activity = activityModes.Gallery
     displayGallery()
-  } else if (key === '1') {
-    copyMode = copyModes.Relative
-  } else if (key === '2') {
-    copyMode = copyModes.RubberStamp
-  } else if (key === '3') {
-    copyMode = copyModes.Absolute
-  }
-
-  if (activity === activityModes.Gallery) {
-    if (key === 'x') {
+  } else if (key === 'd') {
+    activity = activityModes.Drawing
+  } else if (activity === activityModes.Drawing) {
+    if (key === 'c') {
+      clearCanvas()
+    } else if (key === 's') {
+      download()
+    } else if (key === 'i') {
+      rotateImageIndex()
+      renderSource() // why???
+      setSource()
+    } else if (key === '1') {
+      config.copyMode = copyModes.Relative
+    } else if (key === '2') {
+      config.copyMode = copyModes.RubberStamp
+    } else if (key === '3') {
+      config.copyMode = copyModes.Absolute
+    }
+  } else if (activity === activityModes.Gallery) {
+    if (key === 'i') {
+      rotateImageIndex()
+      renderSource() // why???
+      displayGallery()
+    } else if (key === 'x') {
       deleteImage(sourceIndex)
       displayGallery()
     }
