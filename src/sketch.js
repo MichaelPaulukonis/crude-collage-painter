@@ -50,12 +50,11 @@ let config = {
   gapLength: 5,
   gapActive: false,
   gapChance: 0.05,
-  zoom: 1.5
+  zoom: 1.0
 }
 
 let scale = { width: 0, height: 0 } // for selection windowing
 let offset = { x: 0, y: 0 } // for selection windowing
-let zoom = 1.5
 let painted
 let cnvs
 let sourceImage
@@ -98,6 +97,13 @@ sketch.setup = () => {
   parmTab.addBinding(config, 'gapChance', { min: 0, max: 1, step: 0.01 })
 
   parmTab.addBinding(config, 'gapActive')
+
+  parmTab
+    .addButton({
+      title: 'Add to Gallery',
+      label: 'load' // optional
+    })
+    .on('click', () => addToGallery())
 }
 
 // Handle file uploads
@@ -106,12 +112,34 @@ function handleFile (file) {
     loadImage(file.data, img => {
       elementImages.push(img)
       scale = getScale(img, cnvs)
-      activity = activityModes.Gallery
-      displayGallery()
+      // if we're drawing, paint it
+      if (activity === activityModes.Drawing) {
+        image(img, 0, 0)
+        captureDrawing()
+      } else {
+        activity = activityModes.Gallery
+        displayGallery()
+      }
     })
   } else {
     console.log('Not an image file!')
   }
+}
+
+const addToGallery = () => {
+  let img = createImage(width, height)
+  img.copy(
+    cnvs,
+    0,
+    0,
+    width,
+    height,
+    0,
+    0,
+    width,
+    height
+  )
+  elementImages.push(img)
 }
 
 // boundry is the visible window to fill {width, height}
@@ -140,16 +168,6 @@ sketch.draw = () => {
         setSource()
       }
 
-      // source to destination
-      // copy a _SMALLER_ area, but stil target "normal" 50px
-      // let dOffset =
-      //   isDrawing
-      //     ? config.copyMode === copyModes.RubberStamp
-      //     ? { x: 0, y: 0 }
-      //     : config.copyMode === copyModes.Relative || config.copyMode === copyModes.BadScale
-      //     ? { x: mouseX - target.x, y: mouseY - target.y }
-      //     : { x: mouseX, y: mouseY }
-      //     : { x: 0, y: 0 }
       let dOffset
 
       if (isDrawing) {
@@ -175,7 +193,6 @@ sketch.draw = () => {
             dOffset = { x: mouseX, y: mouseY }
         }
       }
-
 
       if (config.copyMode === copyModes.BadScale) {
         copy(
@@ -339,6 +356,33 @@ sketch.mouseReleased = () => {
   }
 }
 
+const paintGrid = () => {
+  const w = Math.ceil(cnvs.width / cursor.width)
+  const h = Math.ceil(cnvs.height / cursor.height)
+
+  for (let x = 0; x < w; x++) {
+    for (let y = 0; y < h; y++) {
+      const xPos = x * cursor.width
+      const yPos = y * cursor.height
+      copy(
+        sourceFrom.img,
+        Math.round(
+          (sourceFrom.x * config.zoom - cursor.width / 2) / config.zoom
+        ),
+        Math.round(
+          (sourceFrom.y * config.zoom - cursor.height / 2) / config.zoom
+        ),
+        Math.round(cursor.width / config.zoom),
+        Math.round(cursor.height / config.zoom),
+        xPos,
+        yPos,
+        cursor.width,
+        cursor.height
+      )
+    }
+  }
+}
+
 // Show input image gallery (no more than 9 for speed)
 const displayGallery = () => {
   const tileCountX = 3
@@ -439,15 +483,18 @@ sketch.keyPressed = () => {
     displayGallery()
   } else if (key === 'd') {
     activity = activityModes.Drawing
+  } else if (key === 'i') {
+    rotateImageIndex()
+    renderSource() // why???
+    setSource()
   } else if (activity === activityModes.Drawing) {
     if (key === 'c') {
       clearCanvas()
     } else if (key === 's') {
       download()
-    } else if (key === 'i') {
-      rotateImageIndex()
-      renderSource() // why???
-      setSource()
+    } else if (key === 'm') {
+      paintGrid()
+      captureDrawing()
     } else if (key === '1') {
       config.copyMode = copyModes.Relative
     } else if (key === '2') {

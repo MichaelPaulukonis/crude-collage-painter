@@ -13,3 +13,6 @@ WHICH IS WHAT I WANT FOR ABSOLUTE!
 
 Otherwise, should be displaying the actual thing it will be painting
 
+## TODO
+
+ - paint grid of cursor
