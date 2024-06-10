@@ -37,7 +37,8 @@ let isDrawing = false
 const copyModes = {
   Relative: 'relative',
   Absolute: 'absolute',
-  RubberStamp: 'rubberstamp'
+  RubberStamp: 'rubberstamp',
+  BadScale: 'badscale'
 }
 
 let config = {
@@ -48,7 +49,8 @@ let config = {
   gapCounter: 0,
   gapLength: 5,
   gapActive: false,
-  gapChance: 0.05
+  gapChance: 0.05,
+  zoom: 1.5
 }
 
 let scale = { width: 0, height: 0 } // for selection windowing
@@ -87,6 +89,7 @@ sketch.setup = () => {
   const parmTab = tab.pages[0]
 
   parmTab.addBinding(config, 'copyMode', { options: copyModes })
+  parmTab.addBinding(config, 'zoom', { min: 0.01, max: 10, step: 0.01 })
 
   parmTab.addBinding(config, 'minDistance', { min: 1, max: 200, step: 1 })
   parmTab.addBinding(config, 'rotateSource')
@@ -122,6 +125,7 @@ const getScale = (img, boundary) => {
 
 // when I click, that becomes the "zero-point" that matches selection-point
 sketch.draw = () => {
+  pane.refresh()
   switch (activity) {
     case activityModes.Drawing:
       handleKeyInput()
@@ -138,26 +142,72 @@ sketch.draw = () => {
 
       // source to destination
       // copy a _SMALLER_ area, but stil target "normal" 50px
-      let dOffset =
-        isDrawing && config.copyMode === copyModes.RubberStamp
-          ? { x: 0, y: 0 }
-          : config.copyMode === copyModes.Relative
-          ? { x: mouseX - target.x, y: mouseY - target.y }
-          : { x: mouseX, y: mouseY }
+      // let dOffset =
+      //   isDrawing
+      //     ? config.copyMode === copyModes.RubberStamp
+      //     ? { x: 0, y: 0 }
+      //     : config.copyMode === copyModes.Relative || config.copyMode === copyModes.BadScale
+      //     ? { x: mouseX - target.x, y: mouseY - target.y }
+      //     : { x: mouseX, y: mouseY }
+      //     : { x: 0, y: 0 }
+      let dOffset
 
-      copy(
-        sourceFrom.img,
-        Math.round((sourceFrom.x * zoom + dOffset.x - cursor.width / 2) / zoom),
-        Math.round(
-          (sourceFrom.y * zoom + dOffset.y - cursor.height / 2) / zoom
-        ),
-        Math.round(cursor.width / zoom),
-        Math.round(cursor.height / zoom),
-        Math.round(mouseX - cursor.width / 2),
-        Math.round(mouseY - cursor.height / 2),
-        cursor.width,
-        cursor.height
-      )
+      if (isDrawing) {
+        switch (config.copyMode) {
+          case copyModes.RubberStamp:
+            dOffset = { x: 0, y: 0 }
+            break
+          case copyModes.Relative:
+          case copyModes.BadScale:
+            dOffset = { x: mouseX - target.x, y: mouseY - target.y }
+            break
+          case copyModes.Absolute:
+            dOffset = { x: mouseX, y: mouseY }
+        }
+      } else {
+        switch (config.copyMode) {
+          case copyModes.RubberStamp:
+          case copyModes.Relative:
+          case copyModes.BadScale:
+            dOffset = { x: 0, y: 0 }
+            break
+          case copyModes.Absolute:
+            dOffset = { x: mouseX, y: mouseY }
+        }
+      }
+
+
+      if (config.copyMode === copyModes.BadScale) {
+        copy(
+          sourceFrom.img,
+          Math.round(sourceFrom.x + dOffset.x - cursor.width / 2),
+          Math.round(sourceFrom.y + dOffset.y - cursor.height / 2),
+          Math.round(cursor.width / config.zoom),
+          Math.round(cursor.height / config.zoom),
+          Math.round(mouseX - cursor.width / 2),
+          Math.round(mouseY - cursor.height / 2),
+          cursor.width,
+          cursor.height
+        )
+      } else {
+        copy(
+          sourceFrom.img,
+          Math.round(
+            (sourceFrom.x * config.zoom + dOffset.x - cursor.width / 2) /
+              config.zoom
+          ),
+          Math.round(
+            (sourceFrom.y * config.zoom + dOffset.y - cursor.height / 2) /
+              config.zoom
+          ),
+          Math.round(cursor.width / config.zoom),
+          Math.round(cursor.height / config.zoom),
+          Math.round(mouseX - cursor.width / 2),
+          Math.round(mouseY - cursor.height / 2),
+          cursor.width,
+          cursor.height
+        )
+      }
 
       if (mouseIsPressed) {
         if (prevMouse.x === 0 && prevMouse.y === 0) {
@@ -248,7 +298,10 @@ sketch.mousePressed = () => {
   if (activity === activityModes.Drawing) {
     isDrawing = true
     // capture initial location
-    if (config.copyMode === copyModes.Relative) {
+    if (
+      config.copyMode === copyModes.Relative ||
+      config.copyMode === copyModes.BadScale
+    ) {
       target = {
         x: mouseX,
         y: mouseY
@@ -348,9 +401,11 @@ const handleKeyInput = () => {
     cursor.width -= 1 * multiplier
     cursor.height -= 1 * multiplier
   } else if (keyIsDown(UP_ARROW)) {
-    zoom += 0.01
+    config.zoom += 0.01
   } else if (keyIsDown(DOWN_ARROW)) {
-    zoom = +(zoom - 0.01 <= 0.01 ? 0.01 : zoom - 0.01).toFixed(2)
+    config.zoom = +(
+      config.zoom - 0.01 <= 0.01 ? 0.01 : config.zoom - 0.01
+    ).toFixed(2)
   }
 }
 
