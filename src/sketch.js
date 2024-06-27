@@ -32,7 +32,6 @@ const activityModes = {
   Drawing: 'draw',
   Gallery: 'gallery'
 }
-let activity = activityModes.Selecting
 let isDrawing = false
 const copyModes = {
   Relative: 'relative',
@@ -42,6 +41,7 @@ const copyModes = {
 }
 
 let config = {
+  activity: activityModes.Selecting,
   copyMode: copyModes.Relative,
   minDistance: 30,
   rotateSource: false,
@@ -100,8 +100,8 @@ sketch.setup = () => {
 
   parmTab
     .addButton({
-      title: 'Add to Gallery',
-      label: 'load' // optional
+      title: 'Add to Gallery'
+      // hidden: config.activity !== activityModes.Drawing // meh, not reactive
     })
     .on('click', () => addToGallery())
 }
@@ -113,11 +113,11 @@ function handleFile (file) {
       elementImages.push(img)
       scale = getScale(img, cnvs)
       // if we're drawing, paint it
-      if (activity === activityModes.Drawing) {
+      if (config.activity === activityModes.Drawing) {
         image(img, 0, 0)
         captureDrawing()
       } else {
-        activity = activityModes.Gallery
+        config.activity = activityModes.Gallery
         displayGallery()
       }
     })
@@ -128,17 +128,7 @@ function handleFile (file) {
 
 const addToGallery = () => {
   let img = createImage(width, height)
-  img.copy(
-    cnvs,
-    0,
-    0,
-    width,
-    height,
-    0,
-    0,
-    width,
-    height
-  )
+  img.copy(cnvs, 0, 0, width, height, 0, 0, width, height)
   elementImages.push(img)
 }
 
@@ -154,7 +144,7 @@ const getScale = (img, boundary) => {
 // when I click, that becomes the "zero-point" that matches selection-point
 sketch.draw = () => {
   pane.refresh()
-  switch (activity) {
+  switch (config.activity) {
     case activityModes.Drawing:
       handleKeyInput()
       render()
@@ -180,6 +170,7 @@ sketch.draw = () => {
             dOffset = { x: mouseX - target.x, y: mouseY - target.y }
             break
           case copyModes.Absolute:
+            // we have to capture/match the offset from selecting mode
             dOffset = { x: mouseX, y: mouseY }
         }
       } else {
@@ -273,7 +264,12 @@ sketch.draw = () => {
         sourceImage.width,
         sourceImage.height
       )
-      rect(mouseX, mouseY, cursor.width, cursor.height)
+      rect(
+        mouseX,
+        mouseY,
+        cursor.width / config.zoom,
+        cursor.height / config.zoom
+      )
       break
   }
 }
@@ -312,19 +308,20 @@ const renderSource = () => {
 
 // this is START of press
 sketch.mousePressed = () => {
-  if (activity === activityModes.Drawing) {
+  if (config.activity === activityModes.Drawing) {
     isDrawing = true
     // capture initial location
     if (
       config.copyMode === copyModes.Relative ||
-      config.copyMode === copyModes.BadScale
+      config.copyMode === copyModes.BadScale ||
+      config.copyMode === copyModes.Absolute
     ) {
       target = {
         x: mouseX,
         y: mouseY
       }
     }
-  } else if (activity === activityModes.Gallery) {
+  } else if (config.activity === activityModes.Gallery) {
     const tileSize = cnvs.width / 3
     let clickedIndex = floor(mouseX / tileSize) + floor(mouseY / tileSize) * 3
     if (clickedIndex < elementImages.length) {
@@ -341,11 +338,11 @@ sketch.mousePressed = () => {
 }
 
 sketch.mouseReleased = () => {
-  if (activity === activityModes.Drawing) {
+  if (config.activity === activityModes.Drawing) {
     isDrawing = false
   }
 
-  if (activity === activityModes.Selecting) {
+  if (config.activity === activityModes.Selecting) {
     renderSource()
 
     sourceFrom = {
@@ -436,20 +433,37 @@ const deleteImage = index => {
 
 const handleKeyInput = () => {
   let multiplier = 1
+  let moveSource = false
   if (keyIsDown(SHIFT)) multiplier = 10
+  if (keyIsDown(ALT)) moveSource = true
 
+  if (moveSource) {
+  // TODO: need rail-guards
   if (keyIsDown(RIGHT_ARROW)) {
-    cursor.width += 1 * multiplier
-    cursor.height += 1 * multiplier
+    sourceFrom.x += 1 * multiplier / 5
   } else if (keyIsDown(LEFT_ARROW)) {
-    cursor.width -= 1 * multiplier
-    cursor.height -= 1 * multiplier
+    sourceFrom.x -= 1 * multiplier / 5
   } else if (keyIsDown(UP_ARROW)) {
-    config.zoom += 0.01
+    sourceFrom.y += 1 * multiplier / 5
   } else if (keyIsDown(DOWN_ARROW)) {
-    config.zoom = +(
-      config.zoom - 0.01 <= 0.01 ? 0.01 : config.zoom - 0.01
-    ).toFixed(2)
+    sourceFrom.y -= 1 * multiplier / 5
+  }
+  sourceFrom.x = constrain(sourceFrom.x, 0, sourceImage.width)
+  sourceFrom.y = constrain(sourceFrom.y, 0, sourceImage.height)
+  } else {
+    if (keyIsDown(RIGHT_ARROW)) {
+      cursor.width += 1 * multiplier
+      cursor.height += 1 * multiplier
+    } else if (keyIsDown(LEFT_ARROW)) {
+      cursor.width -= 1 * multiplier
+      cursor.height -= 1 * multiplier
+    } else if (keyIsDown(UP_ARROW)) {
+      config.zoom += 0.01
+    } else if (keyIsDown(DOWN_ARROW)) {
+      config.zoom = +(
+        config.zoom - 0.01 <= 0.01 ? 0.01 : config.zoom - 0.01
+      ).toFixed(2)
+    }
   }
 }
 
@@ -475,19 +489,19 @@ sketch.keyPressed = () => {
   // mode invariant
   if (key === 'p') {
     renderSource()
-    activity = activityModes.Selecting
+    config.activity = activityModes.Selecting
     stroke('black')
     strokeWeight(2)
   } else if (key === 'g') {
-    activity = activityModes.Gallery
+    config.activity = activityModes.Gallery
     displayGallery()
   } else if (key === 'd') {
-    activity = activityModes.Drawing
+    config.activity = activityModes.Drawing
   } else if (key === 'i') {
     rotateImageIndex()
     renderSource() // why???
     setSource()
-  } else if (activity === activityModes.Drawing) {
+  } else if (config.activity === activityModes.Drawing) {
     if (key === 'c') {
       clearCanvas()
     } else if (key === 's') {
@@ -502,7 +516,7 @@ sketch.keyPressed = () => {
     } else if (key === '3') {
       config.copyMode = copyModes.Absolute
     }
-  } else if (activity === activityModes.Gallery) {
+  } else if (config.activity === activityModes.Gallery) {
     if (key === 'i') {
       rotateImageIndex()
       renderSource() // why???
@@ -513,5 +527,5 @@ sketch.keyPressed = () => {
     }
   }
 
-  return false // Prevent default behavior
+  // return false // Prevent default behavior
 }
