@@ -15,4 +15,8 @@ Otherwise, should be displaying the actual thing it will be painting
 
 ## TODO
 
- - paint grid of cursor
+- ~~paint grid of cursor~~
+- Overlay one large image with chunks knocked out ???
+  - Use that complexity algorithm from RES
+- circular cursor
+- display source at the same time (split)

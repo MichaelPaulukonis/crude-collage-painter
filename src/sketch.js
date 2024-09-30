@@ -22,7 +22,7 @@ let target = {
   x: 0,
   y: 0
 }
-let cursor = {
+let selectionCursor = {
   width: 50,
   height: 50,
   shape: 'square' // for the future
@@ -71,7 +71,8 @@ sketch.preload = () => {
 
 sketch.setup = () => {
   utils = new p5.Utils()
-  cnvs = createCanvas(600, 600)
+  const mc = document.getElementById('main-canvas')
+  cnvs = createCanvas(600, 600, mc)
   cnvs.drop(handleFile)
   density = pixelDensity()
   painted = createImage(width * density, height * density)
@@ -138,7 +139,7 @@ const getScale = (img, boundary) => {
   const heightRatio = boundary.height / img.width
   const ratio = Math.max(widthRatio, heightRatio)
 
-  return { x: img.width * ratio, y: Math.round(img.height * ratio), ratio }
+  return { x: img.width * ratio, y: Math.floor(img.height * ratio), ratio }
 }
 
 // when I click, that becomes the "zero-point" that matches selection-point
@@ -146,6 +147,7 @@ sketch.draw = () => {
   pane.refresh()
   switch (config.activity) {
     case activityModes.Drawing:
+      noCursor()
       handleKeyInput()
       render()
 
@@ -188,32 +190,32 @@ sketch.draw = () => {
       if (config.copyMode === copyModes.BadScale) {
         copy(
           sourceFrom.img,
-          Math.round(sourceFrom.x + dOffset.x - cursor.width / 2),
-          Math.round(sourceFrom.y + dOffset.y - cursor.height / 2),
-          Math.round(cursor.width / config.zoom),
-          Math.round(cursor.height / config.zoom),
-          Math.round(mouseX - cursor.width / 2),
-          Math.round(mouseY - cursor.height / 2),
-          cursor.width,
-          cursor.height
+          Math.floor(sourceFrom.x + dOffset.x - selectionCursor.width / 2),
+          Math.floor(sourceFrom.y + dOffset.y - selectionCursor.height / 2),
+          Math.floor(selectionCursor.width / config.zoom),
+          Math.floor(selectionCursor.height / config.zoom),
+          Math.floor(mouseX - selectionCursor.width / 2),
+          Math.floor(mouseY - selectionCursor.height / 2),
+          selectionCursor.width,
+          selectionCursor.height
         )
       } else {
         copy(
           sourceFrom.img,
-          Math.round(
-            (sourceFrom.x * config.zoom + dOffset.x - cursor.width / 2) /
+          Math.floor(
+            (sourceFrom.x * config.zoom + dOffset.x - selectionCursor.width / 2) /
               config.zoom
           ),
-          Math.round(
-            (sourceFrom.y * config.zoom + dOffset.y - cursor.height / 2) /
+          Math.floor(
+            (sourceFrom.y * config.zoom + dOffset.y - selectionCursor.height / 2) /
               config.zoom
           ),
-          Math.round(cursor.width / config.zoom),
-          Math.round(cursor.height / config.zoom),
-          Math.round(mouseX - cursor.width / 2),
-          Math.round(mouseY - cursor.height / 2),
-          cursor.width,
-          cursor.height
+          Math.floor(selectionCursor.width / config.zoom),
+          Math.floor(selectionCursor.height / config.zoom),
+          Math.floor(mouseX - selectionCursor.width / 2),
+          Math.floor(mouseY - selectionCursor.height / 2),
+          selectionCursor.width,
+          selectionCursor.height
         )
       }
 
@@ -222,7 +224,7 @@ sketch.draw = () => {
           prevMouse = createVector(mouseX, mouseY)
         }
         let curMouse = createVector(mouseX, mouseY)
-        const distance = Math.round(curMouse.dist(prevMouse))
+        const distance = Math.floor(curMouse.dist(prevMouse))
         if (!config.gapActive && random(1) < config.gapChance) {
           config.gapActive = true
           config.gapCounter = 0
@@ -245,6 +247,7 @@ sketch.draw = () => {
       break
 
     case activityModes.Selecting:
+      cursor('crosshair');
       noFill()
       offset.x = constrain(
         map(mouseX, 0, cnvs.width, 0, sourceImage.width - cnvs.width),
@@ -267,10 +270,13 @@ sketch.draw = () => {
       rect(
         mouseX,
         mouseY,
-        cursor.width / config.zoom,
-        cursor.height / config.zoom
+        selectionCursor.width / config.zoom,
+        selectionCursor.height / config.zoom
       )
       break
+
+    default:
+      cursor('crosshair')
   }
 }
 
@@ -346,35 +352,35 @@ sketch.mouseReleased = () => {
     renderSource()
 
     sourceFrom = {
-      x: Math.round(mouseX + offset.x),
-      y: Math.round(mouseY + offset.y),
+      x: Math.floor(mouseX + offset.x),
+      y: Math.floor(mouseY + offset.y),
       img: sourceImage
     }
   }
 }
 
 const paintGrid = () => {
-  const w = Math.ceil(cnvs.width / cursor.width)
-  const h = Math.ceil(cnvs.height / cursor.height)
+  const w = Math.ceil(cnvs.width / selectionCursor.width)
+  const h = Math.ceil(cnvs.height / selectionCursor.height)
 
   for (let x = 0; x < w; x++) {
     for (let y = 0; y < h; y++) {
-      const xPos = x * cursor.width
-      const yPos = y * cursor.height
+      const xPos = x * selectionCursor.width
+      const yPos = y * selectionCursor.height
       copy(
         sourceFrom.img,
-        Math.round(
-          (sourceFrom.x * config.zoom - cursor.width / 2) / config.zoom
+        Math.floor(
+          (sourceFrom.x * config.zoom - selectionCursor.width / 2) / config.zoom
         ),
-        Math.round(
-          (sourceFrom.y * config.zoom - cursor.height / 2) / config.zoom
+        Math.floor(
+          (sourceFrom.y * config.zoom - selectionCursor.height / 2) / config.zoom
         ),
-        Math.round(cursor.width / config.zoom),
-        Math.round(cursor.height / config.zoom),
+        Math.floor(selectionCursor.width / config.zoom),
+        Math.floor(selectionCursor.height / config.zoom),
         xPos,
         yPos,
-        cursor.width,
-        cursor.height
+        selectionCursor.width,
+        selectionCursor.height
       )
     }
   }
@@ -382,6 +388,7 @@ const paintGrid = () => {
 
 // Show input image gallery (no more than 9 for speed)
 const displayGallery = () => {
+  cursor('crosshair')
   const tileCountX = 3
   const tileCountY = 3
 
@@ -452,11 +459,11 @@ const handleKeyInput = () => {
   sourceFrom.y = constrain(sourceFrom.y, 0, sourceImage.height)
   } else {
     if (keyIsDown(RIGHT_ARROW)) {
-      cursor.width += 1 * multiplier
-      cursor.height += 1 * multiplier
+      selectionCursor.width += 1 * multiplier
+      selectionCursor.height += 1 * multiplier
     } else if (keyIsDown(LEFT_ARROW)) {
-      cursor.width -= 1 * multiplier
-      cursor.height -= 1 * multiplier
+      selectionCursor.width -= 1 * multiplier
+      selectionCursor.height -= 1 * multiplier
     } else if (keyIsDown(UP_ARROW)) {
       config.zoom += 0.01
     } else if (keyIsDown(DOWN_ARROW)) {
