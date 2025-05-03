@@ -39,6 +39,7 @@ const copyModes = {
   RubberStamp: 'rubberstamp',
   BadScale: 'badscale'
 }
+let showHelp = false
 
 let config = {
   activity: activityModes.Selecting,
@@ -145,6 +146,12 @@ const getScale = (img, boundary) => {
 // when I click, that becomes the "zero-point" that matches selection-point
 sketch.draw = () => {
   pane.refresh()
+  
+  if (showHelp) {
+    drawHelpScreen()
+    return
+  }
+  
   switch (config.activity) {
     case activityModes.Drawing:
       noCursor()
@@ -492,7 +499,70 @@ const clearCanvas = () => {
   captureDrawing()
 }
 
+const drawHelpScreen = () => {
+  push()
+  background(0, 0, 0, 200)
+  
+  fill(255)
+  textSize(24)
+  textAlign(CENTER)
+  text("HELP SCREEN", width/2, 40)
+  
+  textSize(16)
+  textAlign(LEFT)
+  let y = 80
+  let lineHeight = 24
+  
+  text("MODE KEYS:", 20, y)
+  y += lineHeight * 1.5
+  
+  text("p - Select Mode: Choose source positions", 30, y); y += lineHeight
+  text("d - Draw Mode: Create your composition", 30, y); y += lineHeight
+  text("g - Gallery Mode: View and select source images", 30, y); y += lineHeight
+  
+  y += lineHeight
+  text("DRAWING CONTROLS:", 20, y)
+  y += lineHeight * 1.5
+  
+  text("c - Clear canvas", 30, y); y += lineHeight
+  text("s - Save image", 30, y); y += lineHeight
+  text("m - Paint grid (fill canvas with current selection)", 30, y); y += lineHeight
+  text("i - Rotate through source images", 30, y); y += lineHeight
+  text("x - Delete selected image (in Gallery mode)", 30, y); y += lineHeight
+  
+  y += lineHeight
+  text("COPY MODES:", 20, y)
+  y += lineHeight * 1.5
+  
+  text("1 - Relative copy mode", 30, y); y += lineHeight
+  text("2 - Rubber stamp copy mode", 30, y); y += lineHeight
+  text("3 - Absolute copy mode", 30, y); y += lineHeight
+  
+  y += lineHeight
+  text("ARROW KEYS:", 20, y)
+  y += lineHeight * 1.5
+  
+  text("← → - Adjust cursor size", 30, y); y += lineHeight
+  text("↑ ↓ - Adjust zoom level", 30, y); y += lineHeight
+  text("ALT + arrow keys - Move source position", 30, y); y += lineHeight
+  text("SHIFT + arrow keys - Increase adjustment speed by 10x", 30, y); y += lineHeight
+  
+  y += lineHeight
+  text("Press ? again to close this help screen", width/2, height - 20)
+  textAlign(CENTER)
+  pop()
+}
+
 sketch.keyPressed = () => {
+  // Toggle help screen with ?
+  if (key === '?') {
+    showHelp = !showHelp
+    return
+  }
+  
+  // Don't process other keys when help is showing
+  if (showHelp) return
+  
   // mode invariant
   if (key === 'p') {
     renderSource()
