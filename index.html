@@ -2,13 +2,79 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="assets/favicon.603a37a9.svg" />
+    <link rel="icon" type="image/svg+xml" href="/crude-collage-painter/assets/favicon.603a37a9.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Single sketch</title>
-    <script type="module" crossorigin src="assets/main.e62241a2.js"></script>
-    <link rel="stylesheet" href="assets/main.b62e5340.css">
+    
+    <title>Crude Collage Painter</title>
+    <script type="module" crossorigin src="/crude-collage-painter/assets/main.f76a95ba.js"></script>
+    <link rel="stylesheet" href="/crude-collage-painter/assets/main.63ed48a8.css">
   </head>
   <body>
+    
+    <canvas id="main-canvas"></canvas>
+    
+    <div id="info-box" class="info-box hidden">
+      <h2>Crude Collage Painter</h2>
+      <h3>Keyboard Shortcuts</h3>
+      
+      <div class="shortcuts-grid">
+        <div class="shortcut-section">
+          <h4>Modes</h4>
+          <ul>
+            <li><kbd>p</kbd> - Select mode</li>
+            <li><kbd>g</kbd> - Gallery mode</li>
+            <li><kbd>d</kbd> - Draw mode</li>
+          </ul>
+        </div>
+        
+        <div class="shortcut-section">
+          <h4>Image Operations</h4>
+          <ul>
+            <li><kbd>i</kbd> - Rotate image source</li>
+            <li><kbd>x</kbd> - Delete selected image (gallery mode)</li>
+          </ul>
+        </div>
+        
+        <div class="shortcut-section">
+          <h4>Canvas Operations</h4>
+          <ul>
+            <li><kbd>c</kbd> - Clear canvas</li>
+            <li><kbd>s</kbd> - Save image</li>
+            <li><kbd>m</kbd> - Paint grid</li>
+          </ul>
+        </div>
+        
+        <div class="shortcut-section">
+          <h4>Copy Modes</h4>
+          <ul>
+            <li><kbd>1</kbd> - Relative copy mode</li>
+            <li><kbd>2</kbd> - Stamp copy mode</li>
+            <li><kbd>3</kbd> - Absolute copy mode</li>
+          </ul>
+        </div>
+        
+        <div class="shortcut-section">
+          <h4>Draw Mode Controls</h4>
+          <ul>
+            <li><kbd>←</kbd> / <kbd>→</kbd> - Adjust selection cursor size</li>
+            <li><kbd>↑</kbd> / <kbd>↓</kbd> - Adjust zoom</li>
+            <li><kbd>ALT</kbd> + <kbd>Arrow Keys</kbd> - Move source position</li>
+            <li><kbd>SHIFT</kbd> + <kbd>Arrow Keys</kbd> - 10x faster adjustment</li>
+          </ul>
+        </div>
+        
+        <div class="shortcut-section full-width">
+          <h4>Info Box</h4>
+          <ul>
+            <li><kbd>?</kbd> or <kbd>h</kbd> - Toggle this help</li>
+            <li><kbd>ESC</kbd> - Close this help</li>
+          </ul>
+        </div>
+      </div>
+      
+      <button id="close-info-box" class="close-button">Close</button>
+    </div>
+    
     
   </body>
 </html>
