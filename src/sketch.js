@@ -438,6 +438,7 @@ const deleteImage = index => {
   sourceImage = elementImages[sourceIndex]
 }
 
+// TODO: add to help stuff
 const handleKeyInput = () => {
   let multiplier = 1
   let moveSource = false
@@ -445,18 +446,18 @@ const handleKeyInput = () => {
   if (keyIsDown(ALT)) moveSource = true
 
   if (moveSource) {
-  // TODO: need rail-guards
-  if (keyIsDown(RIGHT_ARROW)) {
-    sourceFrom.x += 1 * multiplier / 5
-  } else if (keyIsDown(LEFT_ARROW)) {
-    sourceFrom.x -= 1 * multiplier / 5
-  } else if (keyIsDown(UP_ARROW)) {
-    sourceFrom.y += 1 * multiplier / 5
-  } else if (keyIsDown(DOWN_ARROW)) {
-    sourceFrom.y -= 1 * multiplier / 5
-  }
-  sourceFrom.x = constrain(sourceFrom.x, 0, sourceImage.width)
-  sourceFrom.y = constrain(sourceFrom.y, 0, sourceImage.height)
+    // TODO: need rail-guards
+    if (keyIsDown(RIGHT_ARROW)) {
+      sourceFrom.x += 1 * multiplier / 5
+    } else if (keyIsDown(LEFT_ARROW)) {
+      sourceFrom.x -= 1 * multiplier / 5
+    } else if (keyIsDown(UP_ARROW)) {
+      sourceFrom.y += 1 * multiplier / 5
+    } else if (keyIsDown(DOWN_ARROW)) {
+      sourceFrom.y -= 1 * multiplier / 5
+    }
+    sourceFrom.x = constrain(sourceFrom.x, 0, sourceImage.width)
+    sourceFrom.y = constrain(sourceFrom.y, 0, sourceImage.height)
   } else {
     if (keyIsDown(RIGHT_ARROW)) {
       selectionCursor.width += 1 * multiplier

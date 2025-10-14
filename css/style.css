@@ -60,3 +60,16 @@ canvas {
   font-variant: small-caps;
   text-transform: none;
 }
+
+
+.two-column-list {
+  column-count: 4;
+  column-gap: 10px;
+  list-style-position: inside;
+  padding: 0;
+}
+
+.two-column-list li {
+  break-inside: avoid;
+  margin-bottom: 5px;
+}
